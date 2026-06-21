@@ -11,7 +11,6 @@ def home():
 def run_web():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
-
 # ওয়েব সার্ভারটি ব্যাকগ্রাউন্ডে চালু হবে
 Thread(target=run_web).start()
 
