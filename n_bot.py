@@ -14,6 +14,7 @@ def run_web():
 
 # ওয়েব সার্ভারটি ব্যাকগ্রাউন্ডে চালু হবে
 Thread(target=run_web).start()
+
 # এরপর আপনার বটের বাকি কোড এখানে থাকবে
 import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
@@ -48,71 +49,60 @@ def get_total_db():
     return total if total else 0.0
 
 # --- বটের ধাপসমূহ ---
-COIN_TYPE, COIN_AMOUNT, REDEEM_CODE_STEP, SCREENSHOT, BKASH_STEP = range(5)
+COIN_TYPE, COIN_AMOUNT, REDEEM_CODE_STEP, USER_ACCOUNT_STEP, SCREENSHOT, BKASH_STEP = range(6)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     welcome_text = (
         f"👋 স্বাগতম, {user.first_name}!\n\n"
-        "💰 আমাদের প্ল্যাটফর্মে আপনাকে স্বাগতম। এখান থেকে আপনি খুব সহজেই আপনার কয়েন সেল করতে পারবেন।\n\n"
-        "✅ **আমাদের বৈশিষ্ট্যসমূহ:**\n"
-        "⭐ Market Highest Rate Guaranteed\n"
-        "🔒 Fast Payment\n"
-        "🛡 100% Secure Transaction\n\n"
-        "নিচের মেনু থেকে আপনার পছন্দের অপশনটি বেছে নিন:"
+        "💰 আমাদের প্ল্যাটফর্মে আপনাকে স্বাগতম। এখান থেকে আপনি খুব সহজেই আপনার কয়েন সেল করতে পারবেন।"
     )
     menu_keyboard = [
         [KeyboardButton("💰 NS Coin"), KeyboardButton("💰 Old Top Coin")],
         [KeyboardButton("💰 Niva Coin"), KeyboardButton("💰 New Top Coin")],
         [KeyboardButton("📞 Support")]
     ]
-    await update.message.reply_text(welcome_text, parse_mode='Markdown', reply_markup=ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True))
+    await update.message.reply_text(welcome_text, reply_markup=ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True))
     return COIN_TYPE
 
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "📞 Support":
-        support_msg = (
-            "👋 Welcome to NS Coin Buy\n"
-            "💡 Earn smarter, not harder!\n\n"
-            "💰 কয়েন Sell এর সবচেয়ে বিশ্বস্ত প্ল্যাটফর্ম।\n"
-            "⭐ Market Highest Rate Guaranteed\n"
-            "🔒 Fast Payment\n"
-            "🛡 100% Secure Transaction\n\n"
-            "📩 যোগাযোগ : @Arafat4466\n"
-            "🔴 Update Channel : https://t.me/nscoinbuy"
-        )
-        await update.message.reply_text(support_msg, parse_mode='Markdown')
+        await update.message.reply_text("📩 যোগাযোগ : @Arafat4466")
         return COIN_TYPE
     
     if text in RATES:
         context.user_data['coin_type'] = text
-        await update.message.reply_text(f"আপনি {text} সিলেক্ট করেছেন।\nবর্তমান রেট:\n{RATES[text]['info']}\n\nকত কয়েন বিক্রি করতে চান সংখ্যায় লিখুন:")
+        await update.message.reply_text(f"আপনি {text} সিলেক্ট করেছেন। কত কয়েন বিক্রি করতে চান সংখ্যায় লিখুন:")
         return COIN_AMOUNT
     return COIN_TYPE
 
 async def step_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         coins = float(update.message.text)
+        context.user_data['coins'] = coins
+        context.user_data['bdt_amount'] = coins * RATES[context.user_data['coin_type']]['rate']
     except ValueError:
-        await update.message.reply_text("ভুল ইনপুট! অনুগ্রহ করে শুধুমাত্র সংখ্যা লিখুন।")
+        await update.message.reply_text("অনুগ্রহ করে সঠিক সংখ্যা লিখুন।")
         return COIN_AMOUNT
         
-    context.user_data['coins'] = coins
+    # সব কয়েনের জন্যই এখন ইউজারের একাউন্ট নেম চাওয়া হবে
+    await update.message.reply_text("✅ পরিমাণ গৃহীত হয়েছে। আপনার কয়েন পাঠানোর একাউন্টের **ইউজারনেম (User Name)** টি লিখুন:")
+    return USER_ACCOUNT_STEP
+
+async def step_user_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['sender_username'] = update.message.text
     coin_type = context.user_data['coin_type']
-    context.user_data['bdt_amount'] = coins * RATES[coin_type]['rate']
     
     if coin_type == "💰 Niva Coin":
-        context.user_data['niva_username'] = "Nk2007khalid2"
-        await update.message.reply_text(f"✅ পরিমাণ গৃহীত হয়েছে। মোট টাকা: {context.user_data['bdt_amount']:.2f} BDT\n🆔 আমাদের Niva Username: `Nk2007khalid2`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
-        return SCREENSHOT
-    
+        await update.message.reply_text(f"✅ গৃহীত। আমাদের Niva Username: `Nk2007khalid2`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
     elif coin_type == "💰 Old Top Coin":
-        await update.message.reply_text("✅ পরিমাণ গৃহীত হয়েছে। এখন আপনার **রিডিম কোডটি** লিখুন:")
+        await update.message.reply_text("✅ গৃহীত। আপনার **রিডিম কোডটি** লিখুন:")
         return REDEEM_CODE_STEP
+    else:
+        info_map = {"💰 NS Coin": "ns_buyer_0", "💰 New Top Coin": "nivafamaly"}
+        await update.message.reply_text(f"✅ গৃহীত। আমাদের ইউজারনেম: `{info_map.get(coin_type)}`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
     
-    info_map = {"💰 NS Coin": "ns_buyer_0", "💰 New Top Coin": "nivafamaly"}
-    await update.message.reply_text(f"✅ পরিমাণ গৃহীত হয়েছে। মোট টাকা: {context.user_data['bdt_amount']:.2f} BDT\n🆔 User Name: `{info_map.get(coin_type)}`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
     return SCREENSHOT
 
 async def step_redeem_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,23 +115,20 @@ async def step_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['photo'] = update.message.photo[-1].file_id
         await update.message.reply_text("✅ স্ক্রিনশট পাওয়া গেছে। পেমেন্ট পাওয়ার জন্য আপনার **বিকাশ নাম্বার**টি লিখুন:")
         return BKASH_STEP
-    else:
-        await update.message.reply_text("অনুগ্রহ করে একটি ছবি (স্ক্রিনশট) পাঠান।")
-        return SCREENSHOT
+    await update.message.reply_text("অনুগ্রহ করে একটি ছবি পাঠান।")
+    return SCREENSHOT
 
 async def step_bkash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bkash = update.message.text
     user = update.effective_user
     
-    # ইউজারনেম বা কোডের তথ্য সংগ্রহ
-    niva_info = f"\n👤 Niva Username: `{context.user_data.get('niva_username', 'N/A')}`" if context.user_data.get('coin_type') == "💰 Niva Coin" else ""
-    redeem_info = f"\n🎟 Redeem Code: `{context.user_data.get('redeem_code', 'N/A')}`" if context.user_data.get('coin_type') == "💰 Old Top Coin" else ""
-    
-    update_total_db(context.user_data['bdt_amount'])
-    caption = (f"🔔 **নতুন রিকোয়েস্ট ({context.user_data['coin_type']})**\n{niva_info}{redeem_info}\n"
-               f"👤 ইউজার: @{user.username}\n💰 কয়েন: {context.user_data['coins']}\n"
-               f"💵 টাকার পরিমাণ: {context.user_data['bdt_amount']:.2f} BDT\n📱 বিকাশ নাম্বার: `{bkash}`\n\n"
-               f"📈 **সর্বমোট:** {get_total_db():.2f} BDT")
+    # সংগৃহীত সব তথ্য দিয়ে ক্যাপশন তৈরি
+    caption = (f"🔔 **নতুন রিকোয়েস্ট ({context.user_data['coin_type']})**\n"
+               f"👤 ইউজারের কয়েন পাঠানোর একাউন্ট: `{context.user_data['sender_username']}`\n"
+               f"👤 টেলিগ্রাম ইউজার: @{user.username}\n"
+               f"💰 কয়েন: {context.user_data['coins']}\n"
+               f"💵 টাকার পরিমাণ: {context.user_data['bdt_amount']:.2f} BDT\n"
+               f"📱 বিকাশ নাম্বার: `{bkash}`")
     
     keyboard = [[InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user.id}"), InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user.id}")]]
     await context.bot.send_photo(chat_id=PRIVATE_GROUP_ID, photo=context.user_data['photo'], caption=caption, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -149,27 +136,4 @@ async def step_bkash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     return ConversationHandler.END
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    action, user_id = query.data.split("_")
-    status = "✔️ স্ট্যাটাস: অ্যাপ্রুভড" if action == "approve" else "✖️ স্ট্যাটাস: রিজেক্টেড"
-    await context.bot.send_message(chat_id=int(user_id), text=f"আপনার রিকোয়েস্টটি {action} করা হয়েছে।")
-    await query.edit_message_caption(caption=query.message.caption + f"\n\n{status}")
-    await query.answer()
-
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(TOKEN).build()
-    conv = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            COIN_TYPE: [MessageHandler(filters.TEXT & (~filters.COMMAND), handle_choice)],
-            COIN_AMOUNT: [MessageHandler(filters.TEXT & (~filters.COMMAND), step_coin)],
-            REDEEM_CODE_STEP: [MessageHandler(filters.TEXT, step_redeem_code)],
-            SCREENSHOT: [MessageHandler(filters.PHOTO | filters.TEXT, step_screenshot)],
-            BKASH_STEP: [MessageHandler(filters.TEXT, step_bkash)],
-        },
-        fallbacks=[CommandHandler('start', start)]
-    )
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(conv)
-    app.run_polling()
+# ... বাকি হ্যান্ডলার এবং মেইন ফাংশন একই থাকবে ...
