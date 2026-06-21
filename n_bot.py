@@ -1,3 +1,20 @@
+import os
+from flask import Flask
+from threading import Thread
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# ওয়েব সার্ভারটি ব্যাকগ্রাউন্ডে চালু হবে
+Thread(target=run_web).start()
+# এরপর আপনার বটের বাকি কোড এখানে থাকবে
 import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler, 
