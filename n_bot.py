@@ -21,8 +21,8 @@ from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler,
                           filters, ContextTypes, ConversationHandler, CallbackQueryHandler)
 
 # --- কনফিগারেশন ---
-TOKEN = 'YOUR_BOT_TOKEN_HERE' 
-PRIVATE_GROUP_ID = -100123456789 
+TOKEN = '8471658319:AAEBi2OJNw9PXVzIdtj0Kooo1vLdesRBvPY' 
+PRIVATE_GROUP_ID = -1004408318864 
 
 # কয়েনের রেটসমূহ
 RATES = {
