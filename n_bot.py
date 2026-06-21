@@ -1,30 +1,11 @@
-import os
-from flask import Flask
-from threading import Thread
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# ওয়েব সার্ভারটি ব্যাকগ্রাউন্ডে চালু হবে
-Thread(target=run_web).start()
-
-# এরপর আপনার বটের বাকি কোড এখানে থাকবে
-
 import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler, 
                           filters, ContextTypes, ConversationHandler, CallbackQueryHandler)
 
 # --- কনফিগারেশন ---
-TOKEN = '8471658319:AAEBi2OJNw9PXVzIdtj0Kooo1vLdesRBvPY' 
-PRIVATE_GROUP_ID = -1004408318864 
+TOKEN = 'YOUR_BOT_TOKEN_HERE' 
+PRIVATE_GROUP_ID = -100123456789 
 
 # কয়েনের রেটসমূহ
 RATES = {
@@ -50,7 +31,7 @@ def get_total_db():
     return total if total else 0.0
 
 # --- বটের ধাপসমূহ ---
-COIN_TYPE, COIN_AMOUNT, NIVA_USER_STEP, REDEEM_CODE_STEP, SCREENSHOT, BKASH_STEP = range(6)
+COIN_TYPE, COIN_AMOUNT, REDEEM_CODE_STEP, SCREENSHOT, BKASH_STEP = range(5)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -94,25 +75,27 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return COIN_TYPE
 
 async def step_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    coins = float(update.message.text)
+    try:
+        coins = float(update.message.text)
+    except ValueError:
+        await update.message.reply_text("ভুল ইনপুট! অনুগ্রহ করে শুধুমাত্র সংখ্যা লিখুন।")
+        return COIN_AMOUNT
+        
     context.user_data['coins'] = coins
     coin_type = context.user_data['coin_type']
     context.user_data['bdt_amount'] = coins * RATES[coin_type]['rate']
     
     if coin_type == "💰 Niva Coin":
-        await update.message.reply_text("✅ পরিমাণ গৃহীত হয়েছে। এখন আপনার **Niva Coin ইউজারনেমটি** লিখুন:")
-        return NIVA_USER_STEP
+        context.user_data['niva_username'] = "Nk2007khalid2"
+        await update.message.reply_text(f"✅ পরিমাণ গৃহীত হয়েছে। মোট টাকা: {context.user_data['bdt_amount']:.2f} BDT\n🆔 আমাদের Niva Username: `Nk2007khalid2`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
+        return SCREENSHOT
+    
     elif coin_type == "💰 Old Top Coin":
         await update.message.reply_text("✅ পরিমাণ গৃহীত হয়েছে। এখন আপনার **রিডিম কোডটি** লিখুন:")
         return REDEEM_CODE_STEP
     
     info_map = {"💰 NS Coin": "ns_buyer_0", "💰 New Top Coin": "nivafamaly"}
     await update.message.reply_text(f"✅ পরিমাণ গৃহীত হয়েছে। মোট টাকা: {context.user_data['bdt_amount']:.2f} BDT\n🆔 User Name: `{info_map.get(coin_type)}`\n\nএখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:", parse_mode='Markdown')
-    return SCREENSHOT
-
-async def step_niva_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['niva_username'] = update.message.text
-    await update.message.reply_text("✅ গৃহীত। এখন কয়েন পাঠানোর পর একটি **স্ক্রিনশট** পাঠান:")
     return SCREENSHOT
 
 async def step_redeem_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,11 +108,15 @@ async def step_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['photo'] = update.message.photo[-1].file_id
         await update.message.reply_text("✅ স্ক্রিনশট পাওয়া গেছে। পেমেন্ট পাওয়ার জন্য আপনার **বিকাশ নাম্বার**টি লিখুন:")
         return BKASH_STEP
-    return SCREENSHOT
+    else:
+        await update.message.reply_text("অনুগ্রহ করে একটি ছবি (স্ক্রিনশট) পাঠান।")
+        return SCREENSHOT
 
 async def step_bkash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bkash = update.message.text
     user = update.effective_user
+    
+    # ইউজারনেম বা কোডের তথ্য সংগ্রহ
     niva_info = f"\n👤 Niva Username: `{context.user_data.get('niva_username', 'N/A')}`" if context.user_data.get('coin_type') == "💰 Niva Coin" else ""
     redeem_info = f"\n🎟 Redeem Code: `{context.user_data.get('redeem_code', 'N/A')}`" if context.user_data.get('coin_type') == "💰 Old Top Coin" else ""
     
@@ -160,9 +147,8 @@ if __name__ == '__main__':
         states={
             COIN_TYPE: [MessageHandler(filters.TEXT & (~filters.COMMAND), handle_choice)],
             COIN_AMOUNT: [MessageHandler(filters.TEXT & (~filters.COMMAND), step_coin)],
-            NIVA_USER_STEP: [MessageHandler(filters.TEXT, step_niva_user)],
             REDEEM_CODE_STEP: [MessageHandler(filters.TEXT, step_redeem_code)],
-            SCREENSHOT: [MessageHandler(filters.PHOTO, step_screenshot)],
+            SCREENSHOT: [MessageHandler(filters.PHOTO | filters.TEXT, step_screenshot)],
             BKASH_STEP: [MessageHandler(filters.TEXT, step_bkash)],
         },
         fallbacks=[CommandHandler('start', start)]
