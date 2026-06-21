@@ -13,6 +13,7 @@ def run_web():
     app.run(host='0.0.0.0', port=port)
 # ওয়েব সার্ভারটি ব্যাকগ্রাউন্ডে চালু হবে
 Thread(target=run_web).start()
+
 # এরপর আপনার বটের বাকি কোড এখানে থাকবে
 import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
