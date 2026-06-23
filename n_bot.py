@@ -23,8 +23,8 @@ from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler,
                           filters, ContextTypes, ConversationHandler, CallbackQueryHandler)
 
 # --- কনফিগারেশন ---
-TOKEN = '8699807890:AAGHMGfQlOoDFk204olacI6SNdrxYqCHH8k' 
-PRIVATE_GROUP_ID = -1004408318864 
+TOKEN = '8699807890:AAEnGS8EPgytbykBShrBtBMemNpCHmEeqVs'
+PRIVATE_GROUP_ID = -1004408318864
 MY_NIVA_USERNAME = "nk2007khalid2" 
 
 # কয়েনের রেটসমূহ
